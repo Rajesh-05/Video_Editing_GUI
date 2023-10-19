@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video to Frames</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #pers{
+            margin-left: 15px;
+            height: 40px;
+            border: solid black;
+            border-radius: 10px;
+        }
+        .container {
+
+            /* background-color: aqua; */
+            display: flex;
+            justify-content: space-between;
+            padding: 0px 20px 20px 20px ;
+        }
+
+        #videoContainer {
+            /* background-color: #eb82e4; */
+            display: inline-block;
+        }
+        #framesContainer {
+            margin-top: 10px;
+            height: 150px;
+            background-color: gray;
+            display: flex;
+            overflow-x: scroll;
+            white-space: no-wrap;
+        }
+        .frameContainer {
+            background-color: #E6E6E6; /* Light gray for left column */
+
+            border: 1px solid #000;
+            padding: 10px;
+            /* width: 40px;
+            height: 27px; */
+            width: 85px;
+            height: 40px;
+            cursor: pointer;
+        }
+        .frameContainer img {
+            width: 80px;
+            height: 40px;
+            
+
+        }
+        .selected {
+            background-color: #f00;
+        }
+
+
+        
+        .left-column {
+            width: 65%;
+            background-color: #E6E6E6; /* Light gray for left column */
+            padding: 20px;
+            margin-bottom: 18px;
+            max-height: 500px;
+            overflow: hidden;
+        }
+        
+        #videoContainer {
+            
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .right-column {
+            background-color: #E6E6E6; /* Light gray for left column */
+
+            width: 30%;
+            max-height: 500px;
+
+            /* background-color: #007BFF; Blue for right column */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            /* animation: colorChange 5s linear infinite alternate; */
+        }
+        
+        .button-container {
+            text-align: center;
+            /* animation: colorChange 5s linear infinite alternate; */
+        }
+        
+        .button-container select,
+        .button-container input,
+        .button-container button {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        
+        .button-container button {
+            text-align: center;
+            margin: 0 auto;
+            background-color: #fff; /* White background for the buttons */
+            color: #007BFF; /* Blue text color for the buttons */
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 12px;
+            border: solid black;
+        }
+        
+        .button-container button:hover {
+            background-color: #0056b3;
+            color: #fff;
+        }
+        
+        #download {
+            background-color: black;
+            font-weight: bolder;
+            font-size: larger;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            position: absolute;
+            width: 150px;
+            height: 50px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            bottom: 20px;
+            right: 20px;
+            cursor: pointer;
+        }
+        
+        #download:hover {
+            background-color: #0056b3;
+        }
+        #toggleSelect
+        {
+            margin: 5%;
+        }
+        #sendFile
+        {
+            margin: 5%;
+        }
+       #videoInput{
+        text-align: center;
+        margin-left: 20px;
+        background-color: #fff; /* White background for the buttons */
+        color: black; /* Blue text color for the buttons */
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        height: 10%;
+        width: 82%;
+        border-radius: 12px;
+        border: solid black;
+        padding-left: 30px;
+       }
+        @keyframes colorChange {
+            0% {
+                background-color: #007BFF;
+            }
+            100% {
+                background-color: #eb82e4;
+            }
+        }
+    </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="left-column">
+                <div id="videoContainer">
+                    <video  width="900px" height="500px" id="video" controls></video>
+                </div>
+            </div>
+            <div class="right-column">
+                <div class="button-container">
+                    <input type="file" accept="video/*" id="videoInput" />
+                    <button id="sendFile">Send File</button>
+                    <select name="pres" id="pers" label="Select a preference">
+                        <option value="Select Person ID">Select Person ID</option>
+                        <option value="1.0">1</option>
+                        <option value="2.0">2</option>
+                        <option value="3.0">3</option>
+                        <option value="4.0">4</option>
+                        <option value="5.0">5</option>
+                        <option value="6.0">6</option>
+                        <option value="7.0">7</option>
+                        <option value="8.0">8</option>
+                        <option value="9.0">9</option>
+                        <option value="10.0">10</option>
+                    </select>
+                    <button id="toggleSelect">Start Selection</button>
+                </div>
+            </div>
+        </div>
+        <button onclick="downloadFile()" id="download">Extract</button>
+        <div id="framesContainer"></div>
+
+        <!-- Frames will be appended here -->
+
+    <script>
+        var data2 ;
+
+        var isSelecting = false;
+        var isDragging = false;
+        var videoInput = document.getElementById('videoInput');
+        var videoContainer = document.getElementById('videoContainer');
+        var video = document.getElementById('video');
+        var framesContainer = document.getElementById('framesContainer');
+        var toggleSelect = document.getElementById('toggleSelect');
+
+        videoInput.addEventListener('change', handleVideoInput);
+        toggleSelect.addEventListener('click', toggleSelectionMode);
+        framesContainer.addEventListener('mousedown', handleMouseDown);
+        framesContainer.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        function handleVideoInput() {
+            framesContainer.innerHTML = ''; // Clear previous frames
+
+            if (videoInput.files.length > 0) {
+                const videoFile = videoInput.files[0];
+                console.log(videoFile);
+                video.src = URL.createObjectURL(videoFile);
+                video.load() ;
+
+                video.onloadeddata = function () {
+                    const frameWidth = 40;
+                    const frameHeight = 27;
+                    const totalFrames = Math.floor(video.duration);
+
+                    for (let i = 0; i < totalFrames; i++) {
+                        captureFrame(i, frameWidth, frameHeight);
+                    }
+                };
+            }
+        }
+
+        function downloadFile() {
+
+    // Assuming `data` is your dictionary
+    var json = JSON.stringify(data2);
+    var blob = new Blob([json], {type: "application/json"});
+
+    // Create a link element
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = "data.json";
+
+    // Append the link to the body (required for Firefox)
+    document.body.appendChild(link);
+
+    // Simulate a click on the link
+    link.click();
+
+    // Remove the link from the body
+    document.body.removeChild(link);
+}
+        function captureFrame(i, frameWidth, frameHeight) {
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = frameWidth;
+            canvas.height = frameHeight;
+
+            video.currentTime = i; // Set the time for the current frame
+
+            setTimeout(function() {
+                
+                context.drawImage(video, 0, 0, frameWidth, frameHeight);
+                const frameImage = new Image();
+                frameImage.src = canvas.toDataURL('image/jpeg');
+                frameImage.draggable = false ;
+
+                const frameContainer = document.createElement('div');
+                frameContainer.className = 'frameContainer';
+                frameContainer.appendChild(frameImage);
+
+                // Add a number to each frame
+                const frameNumber = document.createElement('p');
+                frameNumber.textContent = i + 1; // Frame numbers start from 1
+                frameContainer.appendChild(frameNumber);
+
+                // Add a click event listener to seek to the frame's time
+                if (!isSelecting) {
+                    frameContainer.addEventListener('click', () => {
+                        video.currentTime = i/10;
+                    });
+                }
+
+                framesContainer.appendChild(frameContainer);
+            }, 500);
+        }
+
+        function toggleSelectionMode() {
+            isSelecting = !isSelecting;
+            toggleSelect.textContent = isSelecting ? 'Stop Selection' : 'Start Selection';
+
+            if (!isSelecting) { // If selection mode is turned off
+                logSelectedFrames();
+                
+            }
+        }
+
+        function handleMouseDown(e) {
+            if (isSelecting && e.target.parentNode.classList.contains('frameContainer')) {
+                isDragging = true;
+                e.target.parentNode.classList.add('selected');
+            }
+        }
+
+       function handleMouseMove(e) {
+           if (isSelecting && isDragging && e.target.parentNode.classList.contains('frameContainer')) {
+               e.target.parentNode.classList.add('selected');
+           }
+       }
+
+       function handleMouseUp(e) {
+           isDragging = false;
+       }
+
+    //    deselect :
+
+    function deltoggleSelectionMode() {
+            isSelecting = !isSelecting;
+            toggleSelect.textContent = isSelecting ? 'End' : 'Deselect';
+
+            
+        }
+
+        function delhandleMouseDown(e) {
+            if (isSelecting && e.target.parentNode.classList.contains('frameContainer')) {
+                isDragging = true;
+                e.target.parentNode.classList.remove('selected');
+            }
+        }
+
+       function delhandleMouseMove(e) {
+           if (isSelecting && isDragging && e.target.parentNode.classList.contains('frameContainer')) {
+               e.target.parentNode.classList.remove('selected');
+           }
+       }
+
+       function delhandleMouseUp(e) {
+           isDragging = false;
+       }
+
+       function logSelectedFrames() {
+        const selectedFramesNumbers = Array.from(framesContainer.children)
+  .map((frame, index) => ({ element: frame, index }))
+  .filter(({ element }) => element.classList.contains("selected"))
+  .map(({ index }) => index + 1) // Frame numbers start from 1
+  
+var arr = [...selectedFramesNumbers]; // Convert to an array using the spread operator
+
+console.log("Selected frames:", arr);
+console.log(typeof arr); // "object" (since arrays are objects in JavaScript)
+
+            console.log(2 == '2');
+
+            var pres_id = document.getElementById("pers").value ;
+
+           pres_id = String(pres_id) ;
+           const newLabelValue = 1 ;
+
+           
+
+            
+            // var containers = document.getElementById("framesContainer"); // Select all elements with the "container" class
+            var divs = document.querySelectorAll(".frameContainer") ;
+            console.log(divs);
+
+            divs.forEach(function(div) {
+                div.classList.remove("selected"); // Replace "your-class-to-remove" with the class you want to remove
+            });
+
+            for (let i = 0; i < arr.length; i++) {
+            console.log("frame key", arr[i]);
+            if(data2[arr[i]] && data2[arr[i]][pres_id]){
+                data2[arr[i]][pres_id]['label']=1;}
+            }
+
+            arr=[];
+
+            }
+        
+
+
+
+
+
+       
+       var fkeys ;
+
+       document.getElementById('sendFile').addEventListener('click', sendFileToServer) ;
+
+       function sendFileToServer() {
+           const videoInput = document.getElementById('videoInput');
+           const videoFile = videoInput.files[0];
+           const formData = new FormData();
+           formData.append('file', videoFile);
+       
+           fetch('http://127.0.0.1:5000/process_video', {
+               method: 'POST',
+               body: formData
+           })
+           .then(response => response.json())
+           .then(data => {
+                console.log("HIiii");
+               console.log(data.message);
+
+               data2 = data.message ;
+               fkeys = Object.keys(data2);;
+               console.log(fkeys);
+            //    video.src = "C:/OpenCV/consult/output.mp4"; 
+            // //    processedVideo.style.display = 'block';
+            // //    processedVideo.controls = true;
+            //     video.load();
+
+            fetch('http://127.0.0.1:5000/video')
+    .then(response => response.blob())
+    .then(data => {
+        var url = URL.createObjectURL(data);
+        // var video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+    })
+    .catch(error => console.error(error));
+
+        video.crossOrigin = 'anonymous'; 
+
+               video.onloadeddata = function () {
+                    const frameWidth = 40;
+                    const frameHeight = 27;
+                    const totalFrames = fkeys.length;
+                    console.log(fkeys.length);
+
+                    for (let i = 0; i < totalFrames; i++) {
+                        captureFrame(i, frameWidth, frameHeight);
+                    }
+                };
+            video.crossOrigin = null; 
+
+           });
+       }
+    </script>
+</body>
+</html>
